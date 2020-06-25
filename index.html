@@ -1,0 +1,228 @@
+<!--
+    Copyright © Yann Caron 2018 All rights reserved.
+-->
+<!-- license above -->
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="google" value="notranslate">
+    <title>Fretboard v0.3</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="js/soundfont-player/soundfont-player.min.js"></script>
+    <script src="core/fretboard.js"></script>
+</head>
+
+<body>
+    <header>
+        <select id="tunning" onChange="javascript: onTunningChanged(this);">
+            <option value='["E2", "A2", "D3", "G3", "B3", "E4"]'>Standard E</option>
+            <option value='["D2", "G2", "C3", "F3", "A3", "D4"]'>Standard D</option>
+            <option value='["D2", "A2", "D3", "G3", "B3", "E4"]'>Dropped D</option>
+            <option value='["C2", "G2", "C3", "F3", "A3", "D4"]'>Dropped C</option>
+            <option value='["D2", "A2", "D3", "Gb3", "A3", "D4"]'>Open D</option>
+            <option value='["E1", "A1", "D2", "G2"]'>Standard E Bass</option>
+            <option value='["B0", "E1", "A1", "D2", "G2"]'>Standard B Bass 5 str</option>
+        </select>
+        <select id="root" onChange="javascript: onRootChanged(this);">
+            <option value='A'>A</option>
+            <option value='Bb'>A#</option>
+            <option value='B'>B</option>
+            <option value='C'>C</option>
+            <option value='Db'>C#</option>
+            <option value='D'>D</option>
+            <option value='Eb'>D#</option>
+            <option value='E'>E</option>
+            <option value='F'>F</option>
+            <option value='Gb'>F#</option>
+            <option value='G'>G</option>
+            <option value='Ab'>G#</option>
+        </select>
+        <select id="mode" onChange="javascript: onModeChanged(this);">
+            <option value=''>--</option>
+            <!-- major modes -->
+            <option value='[2, 2, 1, 2, 2, 2, 1]'>Ionian - C</option>
+            <option value='[2, 1, 2, 2, 2, 1, 2]'>Dorian - D</option>
+            <option value='[1, 2, 2, 2, 1, 2, 2]'>Phrygian - E</option>
+            <option value='[2, 2, 2, 1, 2, 2, 1]'>Lydian - F</option>
+            <option value='[2, 2, 1, 2, 2, 1, 2]'>Mixolydian - G</option>
+            <option value='[2, 1, 2, 2, 1, 2, 2]'>Aeolian - A</option>
+            <option value='[1, 2, 2, 1, 2, 2, 2]'>Locrian - B</option>
+            <!-- harmonic minor modes -->
+            <option value='[2, 1, 2, 2, 1, 3, 1]'>Aeolian Maj7 - i</option>
+            <option value='[1, 2, 2, 1, 3, 1, 2]'>Locrian #6 - ii</option>
+            <option value='[2, 2, 1, 3, 1, 2, 1]'>Ionian #5 - iii</option>
+            <option value='[2, 1, 3, 1, 2, 1, 2]'>Dorian #4 - vi</option>
+            <option value='[1, 3, 1, 2, 1, 2, 2]'>Phrygian Dominant - v</option>
+            <option value='[3, 1, 2, 1, 2, 2, 1]'>Lydian #2 - vi</option>
+            <option value='[1, 2, 1, 2, 2, 1, 3]'>Superlocrian bb7 - vii</option>
+            <!-- pentatonic modes (and derived) -->
+            <option value='[2, 2, 3, 2, 3]'>Pentatonic major</option>
+            <option value='[3, 2, 2, 3, 2]'>Pentatonic minor</option>
+            <option value='[2, 1, 1, 3, 2, 3]'>Blues major</option>
+            <option value='[3, 2, 1, 1, 3, 2]'>Blues minor</option>
+            <option value='[2, 1, 1, 1, 1, 1, 2, 1, 2]'>Mixolydian blues</option>
+            <option value='[2, 1, 2, 1, 1, 2, 1, 2]'>Dorian blues</option>
+            <!-- exotic modes -->
+            <option value='[1, 2, 3, 1, 1, 3, 1]'>Indian Raga Tody</option>
+            <option value='[2, 1, 3, 1, 2, 2, 1]'>Lydian Diminished</option>
+            <option value='[1, 2, 2, 1, 1, 3, 2]'>Locrien 6</option>
+            <option value='[3, 2, 1, 1, 3, 1, 1]'>Mixolydien 5 1</option>
+            <option value='[3, 1, 1, 2, 2, 1, 2]'>Mixolydien 2+</option>
+            <option value='[3, 1, 1, 2, 1, 1, 3]'>Purva Melakarta</option>
+            <option value='[3, 1, 1, 2, 2, 2, 1]'>Ionien 2+</option>
+            <option value='[3, 1, 1, 2, 1, 3, 1]'>Ionien 2+ 6m</option>
+            <option value='[2, 2, 1, 1, 1, 3, 2]'>Enigmatic</option>
+            <option value='[1, 3, 1, 2, 2, 2, 1]'>Ionien 2m</option>
+        </select>
+        <button if="clear" onClick="javascript: onClearClicked(this);">clear</button>
+    </header>
+    <main>
+        <canvas id="fretboard" width="1000" height="200">
+        </canvas>
+        <canvas id="legend" width="400" height="200">
+        </canvas>
+    </main>
+
+    <script>
+
+        var canvas = document.getElementById("fretboard");
+        var legend = document.getElementById("legend");
+        var selectTunning = document.getElementById("tunning");
+        var selectRoot = document.getElementById("root");
+        var selectMode = document.getElementById("mode");
+        var sound = null;
+
+        // data
+        var data = {
+            fretCount: 24,
+            tunning: Fretboard.arrayToTunning(JSON.parse(selectTunning.value)),
+            root: Fretboard.NOTES.A,
+            notes: new Set()
+        };
+
+        var draw = function () {
+            var ctx = canvas.getContext("2d");
+
+            // resize
+            canvas.width = Fretboard.BOARD_MARGIN_X * 2 + data.fretCount * Fretboard.NOTE_SPACING;
+            canvas.height = Fretboard.BOARD_MARGIN_Y * 2 + (data.tunning.length - 1) * Fretboard.STRING_SPACING;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            Fretboard.drawScale(ctx, data);
+        }
+        draw();
+
+        var drawLegend = function () {
+            var ctx = legend.getContext("2d");
+
+            ctx.clearRect(0, 0, legend.width, legend.height);
+            Fretboard.drawLegend(ctx);
+        }
+        drawLegend();
+
+        var onClearClicked = function () {
+            data.notes.clear();
+            selectMode.value = '';
+            draw();
+        }
+
+        var onTunningChanged = function (component) {
+            data.tunning = Fretboard.arrayToTunning(JSON.parse(component.value));
+            draw();
+        }
+
+        var onRootChanged = function (component) {
+            data.root = Fretboard.NOTES[component.value];
+
+            if (selectMode.value != '') {
+                data.notes = Fretboard.intervalsToNotes(data.root, JSON.parse(selectMode.value))
+            }
+            draw();
+        }
+
+        var onModeChanged = function (component) {
+            if (component.value != '') {
+                data.notes = Fretboard.intervalsToNotes(data.root, JSON.parse(component.value))
+            }
+            draw();
+        }
+
+        var intervalsToString = function (intervals) {
+            var str = '';
+            for (var interval of intervals) {
+                str += interval;
+            }
+            return str;
+        }
+
+        var intervalOptionsMap = new Map();
+        for (var option of selectMode.options) {
+            if (option.value != '') {
+                var key = intervalsToString(JSON.parse(option.value));
+                intervalOptionsMap.set(key, option.index);
+            }
+        }
+
+        var selectByIntervals = function () {
+            var intervals = Fretboard.notesToIntervals(data.root, data.notes);
+            var find = intervalOptionsMap.get(intervalsToString(intervals));
+
+            if (find) {
+                selectMode.selectedIndex = find;
+            }
+        }
+
+        // load sound font
+        Soundfont.instrument(new AudioContext(), 'electric_guitar_jazz').then(function (instrument) {
+            sound = instrument;
+        })
+
+        var flag = 0;
+        canvas.addEventListener("mousedown", function () {
+            flag = 0;
+        }, false);
+        canvas.addEventListener("mousemove", function () {
+            flag = 1;
+        }, false);
+        canvas.addEventListener("mouseup", function (e) {
+            if (flag === 0) {
+                selectMode.value = '';
+
+                var rect = canvas.getBoundingClientRect();
+                var frt = Math.floor((e.clientX - rect.left + - Fretboard.BOARD_MARGIN_X) / Fretboard.NOTE_SPACING) + 1;
+                var str = (data.tunning.length - 1) - Math.round((e.clientY - rect.top - Fretboard.BOARD_MARGIN_Y) / Fretboard.STRING_SPACING);
+
+                var tune = data.tunning[str]
+                var n = (tune.note.interval + frt) % 12
+                var note = Fretboard.NOTES.valueOf(n);
+
+                var frtOctave = Math.floor((tune.note.interval + frt) / 12) - note.octave + tune.note.octave;
+                var octave = tune.octave + frtOctave;
+
+                if (data.notes.size == 0) {
+                    selectRoot.value = note.id;
+                    data.root = note;
+                }
+
+                if (data.notes.has(note)) {
+                    data.notes.delete(note);
+                } else {
+                    data.notes.add(note);
+                    if (sound != null) sound.play(`${note.name}${octave}`)
+                }
+
+                draw();
+
+                selectByIntervals();
+            }
+        }, false);
+
+    </script>
+
+</body>
+
+</html>
